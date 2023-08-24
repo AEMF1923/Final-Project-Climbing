@@ -31,7 +31,7 @@ public class Permit {
 	
 	@EqualsAndHashCode.Exclude
 	@ToString.Exclude
-	@ManyToMany(mappedBy = "routes")//This has to match the set name below
+	@ManyToMany(mappedBy = "permits")//This has to match the set name below
 	private Set<Route> routes = new HashSet<>();
 
 }
