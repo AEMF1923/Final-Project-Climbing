@@ -44,19 +44,30 @@ public class ClimbingController {
 
 	
 	/*
-	 * creating a route 
+	 * CREATE: creating a route 
+	 * This passed on 08/27/2023
 	 */
 	
 	@PostMapping("/route") //this relates to the ARC api stuff
 	@ResponseStatus(code = HttpStatus.CREATED)
 	public ClimbingRoute insertRoute(@RequestBody ClimbingRoute climbingRoute) {
-		log.info("Creating route {}", climbingRoute);
+		log.info("Creating new route {}", climbingRoute);
 		return climbingService.saveRoute(climbingRoute);
 	}
 	
+	/*
+	 * GET: Reading/Listing all the routes available to us 
+	 * This passed on 08/28/2023
+	 */
+	    @GetMapping("/route")
+        public List<ClimbingRoute> retreieveAllRoutes () {
+		
+		log.info("Retrieving all climbing routes from the route table: ");
+		return climbingService.retrieveAllRoutes(); 
+	}
 	
 	/*
-	 * This is create for the climber 
+	 * CREATE: This is create for the climber 
 	 */
 	@PostMapping("/climber") //this relates to the ARC api stuff. This means create = post
 	@ResponseStatus(code = HttpStatus.CREATED)
@@ -66,7 +77,7 @@ public class ClimbingController {
 	}
 	
 	/*
-	 * This is update for the  climber 
+	 * UPDATE: This is update for the  climber 
 	 */
 	@PutMapping("/climber/{climberId}") //this relates to the ARC api stuff; specifically the url 
 	public ClimbingData updateClimber(@PathVariable Long climberId, 
@@ -77,7 +88,7 @@ public class ClimbingController {
 	}
 	
 	/*
-	 * Get = READ 
+	 * GET= READ 
 	 * Read or list all climbers no specification on identification 
 	 */
 	@GetMapping("/climber")

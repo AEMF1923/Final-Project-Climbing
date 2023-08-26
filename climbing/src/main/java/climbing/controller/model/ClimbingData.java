@@ -24,7 +24,7 @@ public class ClimbingData {
 	private String climberEmail;
 	private String dateOfRouteClimbed; 
 	
-//	private Long routeId; 
+	private Long routeId; 
 	
 	
 	public  ClimbingData (Climber climber) {
@@ -35,6 +35,7 @@ public class ClimbingData {
 		climberAge = climber.getClimberAge(); 
 		climberEmail = climber.getClimberEmail();
 		dateOfRouteClimbed = climber.getDateOfRouteClimbed();
+		///routeId = climber.getRoute(); 
 		
 
 		}

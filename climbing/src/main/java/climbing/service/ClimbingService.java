@@ -38,16 +38,28 @@ public class ClimbingService {
 	@Autowired
 	private ClimberDao climberDao; //This helps me extend jpa/getters and setters 
 	
-	
+	/*
+	 * If there is no climber, then create it 
+	 */
 	@Transactional(readOnly = false)
 	public ClimbingData saveClimber(ClimbingData climbingData) {
-		Long climberId = climbingData.getClimberId();
-		Climber climber = findOrCreateClimber(climberId);
-
-		copyClimberFields(climber, climbingData); // this is a method call. it calls upon a method
-		return new ClimbingData(climberDao.save(climber)); //returning climbing data as I save the climber
+		
+		Climber climber = null;
+		if (climbingData.getClimberId() != null) {
+			Long climberId = climbingData.getClimberId();
+			climber = findOrCreateClimber(climberId);
+			copyClimberFields(climber, climbingData);
+		} else {
+			climber = new Climber();
+			copyClimberFields(climber, climbingData);
+			climberDao.save(climber);
+		}
+		return new ClimbingData(climber); // returning climbing data as I save the climber	
 	}
 
+/*
+ * My climber needs to have a route but it doesn't like the route get call. Why? 	
+ */
 	private void copyClimberFields(Climber climber, ClimbingData climbingData) {
 
 		climber.setClimberFirstName(climbingData.getClimberFirstName());
@@ -56,7 +68,7 @@ public class ClimbingService {
 		climber.setDateOfRouteClimbed(climbingData.getDateOfRouteClimbed());
 		climber.setClimberAge(climbingData.getClimberAge());
 		climber.setClimberEmail(climbingData.getClimberEmail());
-		//climber.setRouteId(climbingData.getRouteId());
+		//climber.setRouteId(climbingData.getRoute());
 		
 	}
 
@@ -122,7 +134,7 @@ public class ClimbingService {
 	}
 
 	public void deleteClimberById(Long climberId) {
-		Climber climber = findClimberById(climberId); // this is you finding the pet store first
+		Climber climber = findClimberById(climberId); // this is you finding the climber
 		climberDao.delete(climber); // this is you deleting it
 		
 	}
@@ -137,14 +149,26 @@ public class ClimbingService {
 	private RouteDao routeDao;
 	
 	
+	
+	/*
+	 * Adding a check for an empty route, so what do you need to do if there is an 
+	 * empty route 
+	 * Do a check if null then what. This is what was done for saving a contributor in Park Service
+	 */
 	@Transactional(readOnly = false)
 	public ClimbingRoute saveRoute(ClimbingRoute climbingRoute) {
 		
-		Long routeId = climbingRoute.getRouteId();
-		Route route = findOrCreateRoute(routeId);
-
-		copyRouteFields(route, climbingRoute); // this is a method call. it calls upon a method
-		return new ClimbingRoute(routeDao.save(route)); //returning climbing data as I save the climber
+		Route route = null;
+		if (climbingRoute.getRouteId() != null) {
+			Long routeId = climbingRoute.getRouteId();
+			route = findOrCreateRoute(routeId);
+			copyRouteFields(route, climbingRoute);
+		} else {
+			route = new Route();
+			copyRouteFields(route, climbingRoute);
+			routeDao.save(route);
+		}
+		return new ClimbingRoute(route); // returning climbing data as I save the climber
 	}
 
 
@@ -165,6 +189,19 @@ public class ClimbingService {
 		return routeDao.findById(routeId)
 				.orElseThrow(() -> 
 				new NoSuchElementException("No Route with ID = " + routeId + " was not found."));
+	}
+
+	public List<ClimbingRoute> retrieveAllRoutes() {
+		List<Route> routes = routeDao.findAll();
+		List<ClimbingRoute> response = new LinkedList<>();
+		
+		/* Using a enhanced for loop. Turning the List of contributor entities in to a list of contributor data */
+		
+		for(Route route : routes) {
+			response.add(new ClimbingRoute(route));
+		}
+		return response;
+		
 	}
 
 	
