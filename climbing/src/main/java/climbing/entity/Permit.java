@@ -23,15 +23,14 @@ public class Permit {
 	@GeneratedValue(strategy = GenerationType.IDENTITY) //This lets the program (Mysql) handle the ids 
 	private Long permitId; 
 	
-	@EqualsAndHashCode.Exclude
 	private String permitType; 
-	
-	@EqualsAndHashCode.Exclude
 	private Long permitPrice; 
+	
+	
 	
 	@EqualsAndHashCode.Exclude
 	@ToString.Exclude
-	@ManyToMany(mappedBy = "routes")//This has to match the set name below
+	@ManyToMany(mappedBy = "permits")//fixed this on 08/27/2023 -- it needs to point to permits 
 	private Set<Route> routes = new HashSet<>();
 
 }

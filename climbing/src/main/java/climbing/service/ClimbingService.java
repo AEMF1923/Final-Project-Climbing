@@ -9,15 +9,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import climbing.controller.model.ClimbingData;
-import climbing.controller.model.ClimbingData.ClimbingRoute;
-import climbing.controller.model.ClimbingData.ClimbingRoute.ClimbingPermit;
+import climbing.controller.model.ClimberData;
+import climbing.controller.model.ClimberData.PermitData;
+import climbing.controller.model.ClimberData.RouteData;
 import climbing.dao.ClimberDao;
 import climbing.dao.RouteDao;
+import climbing.dao.PermitDao;
 import climbing.entity.Climber;
 import climbing.entity.Permit;
 import climbing.entity.Route;
-import climbing.dao.PermitDao;
+
+
+
+
+
 
 
 
@@ -38,17 +43,41 @@ public class ClimbingService {
 	@Autowired
 	private ClimberDao climberDao; //This helps me extend jpa/getters and setters 
 	
-	
+	/*
+	 * If there is no climber, then create it 
+	 */
 	@Transactional(readOnly = false)
-	public ClimbingData saveClimber(ClimbingData climbingData) {
-		Long climberId = climbingData.getClimberId();
-		Climber climber = findOrCreateClimber(climberId);
-
-		copyClimberFields(climber, climbingData); // this is a method call. it calls upon a method
-		return new ClimbingData(climberDao.save(climber)); //returning climbing data as I save the climber
+	public ClimberData saveClimber(Long routeId, ClimberData climberData) {
+		Route route = findRouteById(routeId); 
+		Long climberId = climberData.getClimberId(); 
+		Climber climber = findOrCreateClimber(routeId, climberId);
+		
+		copyClimberFields(climber, climberData);
+		
+		climber.setRoute(route);
+		route.getClimbers().add(climber);
+		
+		return new ClimberData(climberDao.save(climber));
 	}
 
-	private void copyClimberFields(Climber climber, ClimbingData climbingData) {
+	/*
+	 * Finding or creating a climber row
+	 */
+	
+	private Climber findOrCreateClimber(Long routeId, Long climberId) {
+		if (Objects.isNull(climberId)) {
+			return new Climber();
+		} else {
+			return findClimberById(routeId, climberId);
+		}
+}
+
+	/*
+ * My climber needs to have a route but it doesn't like the route get call. Why? 	
+ * Notice what you are calling in the fields, the climber entity and the climber 
+ * data or DTO conversion 
+ */
+	private void copyClimberFields(Climber climber, ClimberData climbingData) {
 
 		climber.setClimberFirstName(climbingData.getClimberFirstName());
 		climber.setClimberLastName(climbingData.getClimberLastName());
@@ -56,29 +85,28 @@ public class ClimbingService {
 		climber.setDateOfRouteClimbed(climbingData.getDateOfRouteClimbed());
 		climber.setClimberAge(climbingData.getClimberAge());
 		climber.setClimberEmail(climbingData.getClimberEmail());
-		//climber.setRouteId(climbingData.getRouteId());
+		//climber.setRouteId(climbingData.getRoute());
 		
 	}
 
-	/*
-	 * Finding or creating a climber row
-	 */
-	private Climber findOrCreateClimber(Long climberId) {
-		if (Objects.isNull(climberId)) {
-			return new Climber();
-		} else {
-			return findClimberById(climberId);
-		}
-}
+
 
 	/*
 	 * finding climber by id for reading/get
+	 * Remember that the DAO extends the JPA-CRUD operations. remember how this
+	 * travels: URL -> controller -> service -> Dao (takes the data from the DTO) 
+	 * The no such element exception is
+	 * 404 error but it makes more sense and is readable
 	 */
 	@Transactional(readOnly = true)
-	private Climber findClimberById(Long climberId) {
-		return climberDao.findById(climberId)
-				.orElseThrow(() -> 
+	private Climber findClimberById(Long climberId, Long routeId) {
+		Climber climber = climberDao.findById(climberId).orElseThrow(() -> 
 				new NoSuchElementException("No Climber with ID = " + climberId + " was not found."));
+		
+		if(climber.getRoute().getRouteId() != routeId) {
+			throw new NoSuchElementException("The climber with ID " + climberId + " did not climb route" + routeId);
+		}
+		return climber;
 	
 	}
 
@@ -88,44 +116,22 @@ public class ClimbingService {
 	 * many accomplished routes
 	 */
 	@Transactional(readOnly = true)
-	public List<ClimbingData> retrieveAllClimbers() {
+	public List<ClimberData> retrieveAllClimbers() {
 		List<Climber> climbers = climberDao.findAll();
-		List<ClimbingData> result = new LinkedList<>();
+		List<ClimberData> result = new LinkedList<>();
 
 		for (Climber climber : climbers) {
-			ClimbingData cd = new ClimbingData(climber);
+			ClimberData cd = new ClimberData(climber);
 //			cd.getRouteId().clear(); // we don't want a list with routes. Only the climbers
-			
 
 			result.add(cd);
 
 		}
 
 		return result;
-		
+
 	}
 
-	/*
-	 * Here we are calling the retrieve climber by id. 
-	 */
-	@Transactional(readOnly = true)
-	public ClimbingData retrieveClimberById(Long climberId) {
-		Climber climber = findClimberById(climberId);
-
-		if (climber == null) {
-			throw new IllegalStateException("Climber with Id = " + climberId + " does not exist");
-
-		}
-
-		return new ClimbingData(climber); 
-											
-	}
-
-	public void deleteClimberById(Long climberId) {
-		Climber climber = findClimberById(climberId); // this is you finding the pet store first
-		climberDao.delete(climber); // this is you deleting it
-		
-	}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/*
@@ -137,18 +143,30 @@ public class ClimbingService {
 	private RouteDao routeDao;
 	
 	
+	
+	/*
+	 * Adding a check for an empty route, so what do you need to do if there is an 
+	 * empty route 
+	 * Do a check if null then what. This is what was done for saving a contributor in Park Service
+	 */
 	@Transactional(readOnly = false)
-	public ClimbingRoute saveRoute(ClimbingRoute climbingRoute) {
+	public RouteData saveRoute(RouteData climbingRoute) {
 		
-		Long routeId = climbingRoute.getRouteId();
-		Route route = findOrCreateRoute(routeId);
-
-		copyRouteFields(route, climbingRoute); // this is a method call. it calls upon a method
-		return new ClimbingRoute(routeDao.save(route)); //returning climbing data as I save the climber
+		Route route = null;
+		if (climbingRoute.getRouteId() != null) {
+			Long routeId = climbingRoute.getRouteId();
+			route = findOrCreateRoute(routeId);
+			copyRouteFields(route, climbingRoute);
+		} else {
+			route = new Route();
+			copyRouteFields(route, climbingRoute);
+			routeDao.save(route);
+		}
+		return new RouteData(route); // returning climbing data as I save the climber
 	}
 
 
-	private void copyRouteFields(Route route, ClimbingRoute climbingRoute) {
+	private void copyRouteFields(Route route, RouteData climbingRoute) {
 
 		route.setRouteId(climbingRoute.getRouteId());
 		route.setRouteName(climbingRoute.getRouteName());
@@ -167,37 +185,152 @@ public class ClimbingService {
 				new NoSuchElementException("No Route with ID = " + routeId + " was not found."));
 	}
 
+	/*
+	 * Get/reading all route information 
+	 * 
+	 */
+	public List<RouteData> retrieveAllRoutes() {
+		List<Route> routes = routeDao.findAll();
+		List<RouteData> response = new LinkedList<>();
+		
+		/* Using a enhanced for loop. Turning the List of contributor entities in to a list of contributor data */
+		
+		for(Route route : routes) {
+			response.add(new RouteData(route));
+		}
+		return response;
+		
+	}
+
+	/* 
+	 * Find route by id 
+	 */
+	private Route findRouteById(Long routeId) {
+		
+	return routeDao.findById(routeId).orElseThrow(() -> new NoSuchElementException("Route with ID " + routeId + " not found."));
+
+	}		
+		
+	/*
+	 * Retrieve route by id 
+	 */
 	
+	@Transactional(readOnly = true)
+	public RouteData retrieveRouteById(Long routeId) {
+		Route route = findRouteById(routeId);
+
+		if (route == null) {
+			throw new IllegalStateException("Route with Id = " + routeId + " does not exist");
+
+		}
+
+		return new RouteData(route); 
+											
+	}
 	
+	public void deleteRouteById(Long routeId) {
+		Route route = findRouteById(routeId); // this is you finding the pet store first
+		routeDao.delete(route);
+		
+		
+		
+	}
 	
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	@Autowired
+	private PermitDao permitDao;
+	
+	public PermitData savePermit(Long routeId, PermitData permitData) {
+		
+		Route route = findRouteById(routeId);
+		Long permitId = permitData.getPermitId();
+		Permit permit = findOrCreatePermit(routeId, permitId);
+		
+		copyPermitFields(permit, permitData);
+		
+		permit.getRoutes().add(route);
+		
+		route.getPermits().add(permit);
+		
+		//Remember what you are doing above this is the many to many relantionship 
+		//several routes can have several permits 
+		
+		return new PermitData(permitDao.save(permit));
+	}
+	
+	
+
+/*
+ * Think of this of setting and defining what the permit object is 
+ * what they expected values are 
+ */
+	private void copyPermitFields(Permit permit, PermitData permitData) {
+		permit.setPermitId(permitData.getPermitId());
+		permit.setPermitPrice(permitData.getPermitPrice());
+		permit.setPermitType(permitData.getPermitType());
+		
+	}
+	
 	/*
-	 * Permit information 
-	 * This is wrong 
-	 * Read/Get permit information
+	 * if you can't find a new route please create the new route 
+	 * If the object permit is null create a new permit object return by id 
+	 * 
 	 */
-//	@Transactional(readOnly = true)
-//	public List<ClimbingPermit> retrieveAllPermits() {
-//		 
-//			List<Permit> permits = permitDao.findAll();
-//			List<ClimbingPermit> result = new LinkedList<>();
-//
-//			for (Permit permit : permits) {
-//				ClimbingPermit pt = new ClimbingPermit(permit);
-//
-//				
-//
-//				result.add(pt);
-//
-//			}
-//
-//			return result;
-//	}
-//	
+	
+	private Permit findOrCreatePermit(Long routeId, Long permitId) {
+		
+		if(Objects.isNull(permitId)) {
+			return new Permit(); 
+		} else {
+			return findPermitById(permitId, routeId);
+		}
+		
+		
+	}
+	
+	
+	private Permit findPermitById(Long permitId, Long routeId) {
+
+		Permit permit = permitDao.findById(permitId)
+				.orElseThrow(() -> new NoSuchElementException("Permit with ID = " + permitId + " was not found."));
+		boolean found = false; // think of this of a new variable that helps you find a match
+
+		for (Route route : permit.getRoutes()) { // the permit is linked to route. remember the entity
+													// relantioship
+			if (route.getRouteId() == routeId) {
+				found = true;
+				break; // this stops the loop when the route id is found
+			}
+		}
+		if (!found) {
+			throw new IllegalArgumentException(
+					"Permit with ID = " + permitId + " doesn't belong to the route with ID = " + routeId);
+		}
+		return permit;
+
+	}
+
+	/*
+	 * 
+	 * Read/Get All permit information
+	 */
+	@Transactional(readOnly = true)
+	public List<PermitData> retrieveAllPermits() {
+		List<Permit> permits = permitDao.findAll();
+		List<PermitData> result = new LinkedList<>();
+
+		for (Permit permit : permits) {
+			PermitData pt = new PermitData(permit);
+			result.add(pt);
+		}
+		return result;
+	}
 	
 	
 
 	}
+	
 	
 	
 	
