@@ -46,9 +46,9 @@ public class Climber {
 	@ToString.Exclude
 	@ManyToOne
 	@JoinColumn(name = "route_id", nullable = false)
-	//private Long routeId;
+	private Route route;
 	
-	private Route route; 
+
 	
 	
 }

@@ -15,11 +15,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import climbing.controller.model.ClimbingData;
-import climbing.controller.model.ClimbingData.ClimbingRoute;
-import climbing.controller.model.ClimbingData.ClimbingRoute.ClimbingPermit;
+import climbing.controller.model.ClimberData;
+import climbing.controller.model.ClimberData.PermitData;
+import climbing.controller.model.ClimberData.RouteData;
 import climbing.service.ClimbingService;
 import lombok.extern.slf4j.Slf4j;
+
+
 
 
 
@@ -44,82 +46,117 @@ public class ClimbingController {
 
 	
 	/*
-	 * creating a route 
+	 * CREATE: creating a route 
+	 * This passed on 08/27/2023
 	 */
 	
 	@PostMapping("/route") //this relates to the ARC api stuff
 	@ResponseStatus(code = HttpStatus.CREATED)
-	public ClimbingRoute insertRoute(@RequestBody ClimbingRoute climbingRoute) {
-		log.info("Creating route {}", climbingRoute);
+	public RouteData insertRoute(@RequestBody RouteData climbingRoute) {
+		log.info("Creating new route {}", climbingRoute);
 		return climbingService.saveRoute(climbingRoute);
 	}
 	
-	
 	/*
-	 * This is create for the climber 
+	 * GET: Reading/Listing all the routes available to us 
+	 * This passed on 08/28/2023
 	 */
-	@PostMapping("/climber") //this relates to the ARC api stuff. This means create = post
-	@ResponseStatus(code = HttpStatus.CREATED)
-	public ClimbingData insertClimber(@RequestBody ClimbingData climbingData) {
-		log.info("Creating new entry for a climber {}", climbingData);
-		return climbingService.saveClimber(climbingData);
+	    @GetMapping("/route")
+        public List<RouteData> retreieveAllRoutes () {
+		
+		log.info("Retrieving all climbing routes from the route table: ");
+		return climbingService.retrieveAllRoutes(); 
+	}
+	    
+	    
+	    //Read route by Id
+		// remember the brackets as a placeholder for that column of values
+		@GetMapping("/{routeId}") 
+		public RouteData retrieveRouteById(@PathVariable Long routeId) {
+			log.info("Retrieving climbing route by ID={}", routeId);
+
+			return climbingService.retrieveRouteById(routeId); //there is no retriece methods in pet store
+		}
+		
+		
+		/*
+		 * Delete route 
+		 */
+		
+		@DeleteMapping("/route/{routeId}")
+		public Map<String, String> deleteRouteById(@PathVariable Long routeId) {
+		
+			climbingService.deleteRouteById(routeId); //this is what calls the service and deletes the pet store
+			
+		log.info("Deleting route with id {}", routeId);
+		return Map.of("delete message", "Deletion of route with ID: " + routeId + " was succesful!!"); 
 	}
 	
+		
+		/*
+		 * UPDATE: This is update for the  climber 
+		 */
+		@PutMapping("/route/{routeId}") //this relates to the ARC api stuff; specifically the url 
+		public RouteData updateRoute(@PathVariable Long routeId, 
+				@RequestBody RouteData routeData) {
+			routeData.setRouteId(routeId);
+			log.info("Updating climber information {}", routeData);
+			return climbingService.saveRoute(routeData);
+		}	
+		
+		
+		
+		
+		
 	/*
-	 * This is update for the  climber 
+	 * POST/CREATE: This is create for the climber 
 	 */
-	@PutMapping("/climber/{climberId}") //this relates to the ARC api stuff; specifically the url 
-	public ClimbingData updateClimber(@PathVariable Long climberId, 
-			@RequestBody ClimbingData climbingData) {
-		climbingData.setClimberId(climberId);
-		log.info("Updating climber information {}", climbingData);
-		return climbingService.saveClimber(climbingData);
+	@PostMapping("/{routeId}/climber") //this relates to the ARC api stuff. This means create = post
+	@ResponseStatus(code = HttpStatus.CREATED)// This is 201 Success!
+	public ClimberData addClimber(@PathVariable Long routeId,
+			@RequestBody ClimberData climberData) {
+		
+		log.info("Creating new entry for a climber {}", climberData);
+		return climbingService.saveClimber(routeId, climberData);
 	}
 	
+	
 	/*
-	 * Get = READ 
+	 * GET= READ 
 	 * Read or list all climbers no specification on identification 
 	 */
 	@GetMapping("/climber")
-	public List<ClimbingData> retreieveAllClimbers () {
+	public List<ClimberData> retreieveAllClimbers () {
 		
 		log.info("Retrieving all climbers from the climber table: ");
 		return climbingService.retrieveAllClimbers(); 
 	}
 	
 	
-	//GET/Read climber by Id
-	// remember the brackets as a placeholder for that column of values
-	@GetMapping("/climber/{climberId}") 
-	public ClimbingData retrievePetStoreById(@PathVariable Long climberId) {
-		log.info("Retrieving climber by their ID={}", climberId);
-
-		return climbingService.retrieveClimberById(climberId);
-	}
-	
-	/*
-	 * Delete climber 
-	 */
-	
-	@DeleteMapping("/climber/{climberId}")
-	public Map<String, String> deleteClimberById(@PathVariable Long climberId) {
-	
-		climbingService.deleteClimberById(climberId); //this is what calls the service and deletes the pet store
-		
-	log.info("Deleting climber with id {}", climberId);
-	return Map.of("delete message", "Deletion of climber with ID: " + climberId + " was succesful!!"); 
-}
-	
 	/*
 	 * Get = READ 
 	 * Read or list all climbers no specification on identification 
+	 * Tested and passed 08/27/2023
+	 * 
 	 */
-//	@GetMapping("/climber/permit")
-//	public List<ClimbingPermit> retreieveAllPermits () {
-//		
-//		log.info("Retrieving all climbers from the climber table: ");
-//		return climbingService.retrieveAllPermits(); 
-//	}
+	@GetMapping("/permit")
+	public List<PermitData> retreieveAllPermits () {
+		
+		log.info("Retrieving all permits from the permit table: ");
+		return climbingService.retrieveAllPermits(); 
+	}
 	
+	
+	/*
+	 * Tested and passed on 08/27/2023
+	 */
+	@PostMapping("/{routeId}/permit")
+	@ResponseStatus(code = HttpStatus.CREATED) //this is 201 created
+	public PermitData addPermit(@PathVariable Long routeId, 
+			@RequestBody PermitData permitData) {
+		
+		log.info("Adding a new pet store customer {}", permitData);
+		return climbingService.savePermit(routeId, permitData);
+	}
 	
 }

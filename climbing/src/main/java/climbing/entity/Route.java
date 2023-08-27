@@ -9,7 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinColumns;
+
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToMany;
@@ -45,24 +45,31 @@ public class Route {
 	
 	
 	/*
-	 * one climber to many routes 
-	 * one climber can climb many routes or have climbed many routes 
-	 */
-	@EqualsAndHashCode.Exclude
-	@ToString.Exclude
-	@OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-	private Set<Climber> climbers = new HashSet<>(); 
-	
-	/*
 	 * Many routes can have several permits. You can have a day, overnight, month or annual 
 	 */
+
+	
 	@EqualsAndHashCode.Exclude
 	@ToString.Exclude
 	@ManyToMany(cascade = CascadeType.PERSIST)
-	@JoinTable(
-			name = "route_permit", 
-			joinColumns = @JoinColumn(name = "route_id"), 
-	        inverseJoinColumns = @JoinColumn(name = "permit_id"))
+	@JoinTable(name = "route_permit", joinColumns = @JoinColumn(name = "permit_id")) // This has to match the set name																	
 	private Set<Permit> permits = new HashSet<>();
+	
+	
+	/*
+	 * one climber to many routes 
+	 * one climber can climb many routes or have climbed many routes 
+	 * This makes sense because multiple climbers can climb a route
+	 * 
+	 * It does not like the mapped by, if I take it out the application works, but I noticed that is 
+	 * being used in Pet Store
+	 */
+	
+	
+	@EqualsAndHashCode.Exclude
+	@ToString.Exclude
+	@OneToMany(mappedBy = "route", cascade = CascadeType.PERSIST)  //Don't I have to put a mapped by here...it is in the PetStore
+	private Set<Climber> climbers = new HashSet<>(); 
+	
 }
 
